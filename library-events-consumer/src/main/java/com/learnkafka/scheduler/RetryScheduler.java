@@ -16,6 +16,7 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
@@ -37,6 +38,9 @@ public class RetryScheduler {
 
     @Autowired
     private RabbitTemplate rabbitTemplate;
+
+    @Autowired
+    private StreamBridge streamBridge;
 
     @Scheduled(fixedRate = 10000)
     public void retryFailedRecords(){
@@ -71,6 +75,6 @@ public class RetryScheduler {
     }
 
     public void sendToRetryQueue(Object message) {
-        rabbitTemplate.convertAndSend("retry.queue", message);
+        streamBridge.send("retry-out-0", message);
     }
 }
