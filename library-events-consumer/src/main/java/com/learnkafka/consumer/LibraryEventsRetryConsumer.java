@@ -3,9 +3,11 @@ package com.learnkafka.consumer;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.learnkafka.service.LibraryEventsService;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -15,13 +17,9 @@ public class LibraryEventsRetryConsumer {
     @Autowired
     private LibraryEventsService libraryEventsService;
 
-    @KafkaListener(topics = {"${topics.retry}"}
-    , autoStartup = "${retryListener.startup:true}"
-    , groupId = "retry-listener-group")
-    public void onMessage(ConsumerRecord<Integer,String> consumerRecord) throws JsonProcessingException {
-
-        log.info("ConsumerRecord in Retry Consumer: {} ", consumerRecord );
-        libraryEventsService.processLibraryEvent(consumerRecord);
-
+    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "${topics.retry}", durable = "true"))
+    public void onMessage(String message, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) throws JsonProcessingException {
+        log.info("Message in Retry Consumer: {} ", message);
+        libraryEventsService.processLibraryEvent(message);
     }
 }

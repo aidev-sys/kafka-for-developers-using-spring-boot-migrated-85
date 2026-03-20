@@ -3,9 +3,9 @@ package com.learnkafka.entity;
 
 import lombok.*;
 
-import javax.persistence.*;
-import javax.validation.Valid;
-import javax.validation.constraints.NotNull;
+import jakarta.persistence.*;
+import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 
 @AllArgsConstructor
 @NoArgsConstructor
@@ -15,7 +15,7 @@ import javax.validation.constraints.NotNull;
 public class LibraryEvent {
 
     @Id
-    @GeneratedValue
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer libraryEventId;
     @Enumerated(EnumType.STRING)
     private LibraryEventType libraryEventType;

@@ -5,16 +5,17 @@ import com.learnkafka.domain.LibraryEvent;
 import com.learnkafka.domain.LibraryEventType;
 import com.learnkafka.producer.LibraryEventProducer;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.kafka.support.SendResult;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
 
-import javax.validation.Valid;
+import jakarta.validation.Valid;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
 @RestController
@@ -22,15 +23,14 @@ import java.util.concurrent.ExecutionException;
 public class LibraryEventsController {
 
     @Autowired
-    LibraryEventProducer libraryEventProducer;
+    private RabbitTemplate rabbitTemplate;
 
     @PostMapping("/v1/libraryevent")
     public ResponseEntity<LibraryEvent> postLibraryEvent(@RequestBody @Valid LibraryEvent libraryEvent) throws JsonProcessingException, ExecutionException, InterruptedException {
 
-        //invoke kafka producer
+        //invoke rabbitmq producer
         libraryEvent.setLibraryEventType(LibraryEventType.NEW);
-        libraryEventProducer.sendLibraryEvent_Approach2(libraryEvent);
-        //libraryEventProducer.sendLibraryEvent(libraryEvent);
+        rabbitTemplate.convertAndSend("library-event-topic", libraryEvent);
         return ResponseEntity.status(HttpStatus.CREATED).body(libraryEvent);
     }
 
@@ -44,7 +44,7 @@ public class LibraryEventsController {
         }
 
         libraryEvent.setLibraryEventType(LibraryEventType.UPDATE);
-        libraryEventProducer.sendLibraryEvent_Approach2(libraryEvent);
+        rabbitTemplate.convertAndSend("library-event-topic", libraryEvent);
         return ResponseEntity.status(HttpStatus.OK).body(libraryEvent);
     }
 }

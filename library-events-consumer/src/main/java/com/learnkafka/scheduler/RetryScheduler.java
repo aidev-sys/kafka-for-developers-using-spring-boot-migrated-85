@@ -8,14 +8,22 @@ import com.learnkafka.entity.FailureRecord;
 import com.learnkafka.entity.LibraryEvent;
 import com.learnkafka.jpa.FailureRecordRepository;
 import com.learnkafka.service.LibraryEventsService;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.amqp.core.Queue;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
-//@Component
+import java.util.List;
+
+@Component
 @Slf4j
+@ConditionalOnProperty(name = "app.retry.scheduler.enabled", havingValue = "true", matchIfMissing = true)
 public class RetryScheduler {
 
     @Autowired
@@ -24,33 +32,45 @@ public class RetryScheduler {
     @Autowired
     FailureRecordRepository failureRecordRepository;
 
+    @PersistenceContext
+    EntityManager entityManager;
 
-    @Scheduled(fixedRate = 10000 )
+    @Autowired
+    private RabbitTemplate rabbitTemplate;
+
+    @Scheduled(fixedRate = 10000)
     public void retryFailedRecords(){
-
         log.info("Retrying Failed Records Started!");
         var status = LibraryEventsConsumerConfig.RETRY;
-        failureRecordRepository.findAllByStatus(status)
-                .forEach(failureRecord -> {
-                    try {
-                        //libraryEventsService.processLibraryEvent();
-                        var consumerRecord = buildConsumerRecord(failureRecord);
-                        libraryEventsService.processLibraryEvent(consumerRecord);
-                       // libraryEventsConsumer.onMessage(consumerRecord); // This does not involve the recovery code for in the consumerConfig
-                        failureRecord.setStatus(LibraryEventsConsumerConfig.SUCCESS);
-                    } catch (Exception e){
-                        log.error("Exception in retryFailedRecords : ", e);
-                    }
-
-                });
-
+        List<FailureRecord> failureRecords = failureRecordRepository.findAllByStatus(status);
+        for (FailureRecord failureRecord : failureRecords) {
+            try {
+                var consumerRecord = buildConsumerRecord(failureRecord);
+                libraryEventsService.processLibraryEvent(consumerRecord);
+                failureRecord.setStatus(LibraryEventsConsumerConfig.SUCCESS);
+                entityManager.merge(failureRecord);
+            } catch (Exception e){
+                log.error("Exception in retryFailedRecords : ", e);
+            }
+        }
     }
 
-    private ConsumerRecord<Integer, String> buildConsumerRecord(FailureRecord failureRecord) {
+    private org.springframework.kafka.clients.consumer.ConsumerRecord<Integer, String> buildConsumerRecord(FailureRecord failureRecord) {
+        return new org.springframework.kafka.clients.consumer.ConsumerRecord<>(
+                failureRecord.getTopic(),
+                failureRecord.getPartition(),
+                failureRecord.getOffset_value(),
+                failureRecord.getKey(),
+                failureRecord.getErrorRecord()
+        );
+    }
 
-        return new ConsumerRecord<>(failureRecord.getTopic(),
-                failureRecord.getPartition(), failureRecord.getOffset_value(), failureRecord.getKey(),
-                failureRecord.getErrorRecord());
+    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "retry.queue", durable = "true"))
+    public void handleRetry(String message) {
+        log.info("Handling retry message: {}", message);
+    }
 
+    public void sendToRetryQueue(Object message) {
+        rabbitTemplate.convertAndSend("retry.queue", message);
     }
 }

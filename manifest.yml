@@ -1,0 +1,15 @@
+---
+applications:
+- name: kafka-for-developers-using-spring-boot-modernized
+  memory: 1G
+  instances: 1
+  buildpacks:
+    - java_buildpack
+  path: .
+  env:
+    JBP_CONFIG_OPEN_JDK_JRE: '{ jre: { version: 21.+ } }'
+    SPRING_PROFILES_ACTIVE: cloud
+  services:
+    - modernized-postgres
+    - modernized-rabbitmq
+

@@ -2,6 +2,7 @@ package com.learnkafka.controller;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
@@ -16,6 +17,12 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LibraryEventControllerAdvice {
 
+    private final RabbitTemplate rabbitTemplate;
+
+    public LibraryEventControllerAdvice(RabbitTemplate rabbitTemplate) {
+        this.rabbitTemplate = rabbitTemplate;
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<?> handleRequestBody(MethodArgumentNotValidException ex) {
 
@@ -25,6 +32,9 @@ public class LibraryEventControllerAdvice {
                 .sorted()
                 .collect(Collectors.joining(", "));
         log.info("errorMessage : {} ", errorMessage);
+        
+        rabbitTemplate.convertAndSend("library.event.errors", errorMessage);
+        
         return new ResponseEntity<>(errorMessage, HttpStatus.BAD_REQUEST);
     }
 }

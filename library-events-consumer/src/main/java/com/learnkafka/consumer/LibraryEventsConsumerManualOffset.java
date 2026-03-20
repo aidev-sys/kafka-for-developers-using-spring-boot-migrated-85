@@ -1,20 +1,20 @@
 package com.learnkafka.consumer;
 
 import lombok.extern.slf4j.Slf4j;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.springframework.kafka.annotation.KafkaListener;
-import org.springframework.kafka.listener.AcknowledgingMessageListener;
-import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.amqp.support.AmqpHeaders;
+import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.persistence.*;
 
-//@Component
+@Component
 @Slf4j
-public class LibraryEventsConsumerManualOffset implements AcknowledgingMessageListener<Integer,String> {
+public class LibraryEventsConsumerManualOffset {
 
-    @Override
-    @KafkaListener(topics = {"library-event s"})
-    public void onMessage(ConsumerRecord<Integer, String> consumerRecord, Acknowledgment acknowledgment) {
-        log.info("ConsumerRecord in Manual Offset Consumer: {} ", consumerRecord );
-        acknowledgment.acknowledge();
+    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "library-events", durable = "true"))
+    public void onMessage(String message, @Header(AmqpHeaders.DELIVERY_TAG) long deliveryTag) {
+        log.info("Message received: {}", message);
+        // Simulate processing and acknowledge via manual ack in RabbitMQ
     }
 }
