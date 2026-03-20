@@ -18,7 +18,7 @@ public class AutoCreateConfig {
         return new Queue("library-events", true);
     }
 
-    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "library-events", durable = "true"))
+    @RabbitListener(queues = "library-events")
     public void listen(String in) {
         System.out.println("Received: " + in);
     }

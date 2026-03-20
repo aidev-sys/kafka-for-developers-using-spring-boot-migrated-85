@@ -8,6 +8,7 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.amqp.rabbit.support.CorrelationData;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Component;
 
 import java.util.concurrent.CompletableFuture;
@@ -21,10 +22,12 @@ public class LibraryEventProducer {
 
     RabbitTemplate rabbitTemplate;
     ObjectMapper objectMapper;
+    StreamBridge streamBridge;
 
-    public LibraryEventProducer(RabbitTemplate rabbitTemplate, ObjectMapper objectMapper) {
+    public LibraryEventProducer(RabbitTemplate rabbitTemplate, ObjectMapper objectMapper, StreamBridge streamBridge) {
         this.rabbitTemplate = rabbitTemplate;
         this.objectMapper = objectMapper;
+        this.streamBridge = streamBridge;
     }
 
     public void sendLibraryEvent(LibraryEvent libraryEvent) throws JsonProcessingException {

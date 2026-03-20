@@ -1,9 +1,12 @@
 package com.learnkafka.jpa;
 
 import com.learnkafka.entity.FailureRecord;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessagePostProcessor;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cloud.stream.function.StreamBridge;
 import org.springframework.stereotype.Repository;
 
 import jakarta.persistence.*;
@@ -18,6 +21,9 @@ public class FailureRecordRepository {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
+    @Autowired
+    private StreamBridge streamBridge;
+
     public void save(FailureRecord failureRecord) {
         entityManager.persist(failureRecord);
     }
@@ -29,9 +35,9 @@ public class FailureRecordRepository {
         return query.getResultList();
     }
 
-    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "failure.record.queue", durable = "true"))
-    public void handleFailureRecord(Object message) {
+    @RabbitListener(queues = "failure.record.queue")
+    public void handleFailureRecord(Message message) {
         // Process the message
-        rabbitTemplate.convertAndSend("failure.record.processed", message);
+        streamBridge.send("failureRecordSink", message);
     }
 }

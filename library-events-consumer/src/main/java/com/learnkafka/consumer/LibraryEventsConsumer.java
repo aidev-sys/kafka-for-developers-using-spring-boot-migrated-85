@@ -19,7 +19,7 @@ public class LibraryEventsConsumer {
     @Autowired
     private LibraryEventsService libraryEventsService;
 
-    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = "library-events", durable = "true"))
+    @RabbitListener(queues = "library-events")
     public void onMessage(String payload, @Header(AmqpHeaders.RECEIVED_ROUTING_KEY) String routingKey) throws JsonProcessingException {
         log.info("Received message: {} with routing key: {}", payload, routingKey);
         libraryEventsService.processLibraryEvent(payload);

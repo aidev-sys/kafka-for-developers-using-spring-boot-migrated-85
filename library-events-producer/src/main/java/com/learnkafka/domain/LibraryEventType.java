@@ -15,7 +15,7 @@ public class LibraryEventType {
     @Autowired
     private RabbitTemplate rabbitTemplate;
 
-    @RabbitListener(queuesToDeclare = @org.springframework.amqp.rabbit.annotation.Queue(name = LIBRARY_EVENT_QUEUE, durable = "true"))
+    @RabbitListener(queues = LIBRARY_EVENT_QUEUE)
     public void listenLibraryEvent(Object event) {
         System.out.println("Received library event: " + event);
     }
